@@ -1,16 +1,17 @@
-import sys
-sys.path.append("../package")
 import numpy as np
 import random
-from environment_PSO import Env
+from package.environment_PSO import Env
 import csv
 import pandas as pd
 import time
 
+###hyper parameter ###############
 T = 20  #Number of loops
-position_min, position_max = -2, 2
+position_min, position_max = -2, 2        #reagion of initial state
 total_atom_num = 12
 inverse_atom_num = 1   #number of inverse designed atom
+##################################
+
 model_name = 'Cd6Se6/model_Cd6Se6.pkl'    #spectra predict model
 target_data = 'Cd6Se6/Cd6Se6_abs.csv'     #target structure and spectra data
 env = Env(model_name, target_data, total_atom_num, inverse_atom_num)
@@ -58,10 +59,13 @@ def main():
             vs[n] = new_velocity
             #evaluation positino of each particle and update best position of each particle
             score = criterion(new_position)
-            buffer = list(new_position) + [score]
             if score < personal_best_scores[n]:
                 personal_best_scores[n] = score
                 personal_best_positions[n] = new_position
+            if t == (T-1):
+                with open('validation_state.csv', 'a') as f:  
+                    writer = csv.writer(f)
+                    writer.writerow(list(new_position))
         #Update the particle of best score
         best_particle = np.argmin(personal_best_scores)
         global_best_position = personal_best_positions[best_particle]

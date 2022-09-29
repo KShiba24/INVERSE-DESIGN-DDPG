@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
-import sys
-sys.path.append("../package")
-from environment import Env
+from package.environment import Env
 import numpy as np
 import matplotlib.pyplot as plt
-from ddpg import Agent, Buffer
+from package.ddpg import Agent, Buffer
 import pandas as pd
 import csv
 import os
@@ -16,19 +14,20 @@ def main():
 
     buffer_size = 100000
     total_reward = []
-    search_region = 2      #length of a side of search region (Å)
-    max_step = 200         #max step in one episord
-    inverse_atom_num = 1   #number of inverse designed atom
-    action_high = pd.read_csv('action_limit_high.csv', header=None)
-    action_low = pd.read_csv('action_limit_low.csv', header=None)
+    ###hyper parameter #################
+    search_region = 2                         #length of a side of search region (Å)
+    loss_min = 0.122                          #if the error is less than 'loss_min',episord is terminated 
+    total_atom_num = 12                       #number of total atom in quantum dot
+    inverse_atom_num = 1                      #number of inverse designed atom
+    model_name = 'Cd6Se6/model_Cd6Se6.pkl'    #spectra predict model
+    target_data = 'Cd6Se6/Cd6Se6_abs.csv'     #target structure and spectra data
+    max_step = 200                            #max step in one episord
+    ####################################
+
+    action_high = pd.read_csv('package/action_limit_high.csv', header=None)
+    action_low = pd.read_csv('package/action_limit_low.csv', header=None)
     action_high = np.array(action_high)[0][:inverse_atom_num*2].reshape((1,-1))
     action_low = np.array(action_low)[0][:inverse_atom_num*2].reshape((1,-1))
-
-    loss_min = 0.122    #if the error is less than 'loss_min',episord is terminated 
-    total_atom_num = 12
-    model_name = 'Cd6Se6/model_Cd6Se6.pkl'    #spectra predict model
-    target_data = 'Cd6Se6/Cd6Se6_abs.csv'              #target structure and spectra data
-
 
 
     env = Env(model_name, target_data, max_step, loss_min, total_atom_num, inverse_atom_num,search_region)
@@ -38,7 +37,7 @@ def main():
     buffer = Buffer(buffer_size)
     start = time.time()
     ###train DDPG agent##########
-    for i_episode in range(5000):
+    for i_episode in range(5000):    #loop of episord
         print("episode: %d" % i_episode)
         state = env.reset()
         total_reward_in_episode = 0
@@ -59,7 +58,7 @@ def main():
 
 #    save_name = 'trained_parameter' 
 #    agent.save(save_name)
-
+    
     ###plot reward curve##########
     episode = 5000
     x_episode = np.linspace(1, episode, episode)
@@ -92,8 +91,28 @@ def main():
     ################################
 
 
+    ###validation trained DDPG agent####
+    start = time.time()
+    for i in range(100):
+        done1 = False
+        while not done1:
+            state = env.reset()
+            total_reward_in_episode = 0
+            done = False
+            while not done:
+                action = agent.choose_action(state, (0.001))
+                next_state, reward, done = env.step(action, state)
+                total_reward_in_episode += reward
+                transition = np.array([state, action, next_state, reward, done],dtype=object)
+                state = next_state
+            if reward != -20:
+                done1 = True
+        with open('validation_state.csv', 'a') as f:   #吸収
+            writer = csv.writer(f)
+            writer.writerow(next_state)
+    elapsed_time = time.time() - start
+    print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
 
-
-
+    ####################################
 if __name__ == '__main__':
     main()

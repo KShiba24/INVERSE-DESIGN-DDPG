@@ -1,0 +1,10 @@
+%mem=40GB
+%CPU=0-20
+%chk=output.chk
+#P cam-b3lyp/lanl2dz td(nstates=6)
+
+Title Card Required
+
+0 1
+
+
